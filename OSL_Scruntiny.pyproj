@@ -29,9 +29,9 @@
   <ItemGroup>
     <Content Include=".gitattributes" />
     <Content Include=".gitignore" />
+    <Content Include="LICENSE" />
     <Content Include="license_lib.xlsx" />
     <Content Include="Scrutiny_result.xlsx" />
-    <Content Include="target_files\BZip2.cs" />
   </ItemGroup>
   <Import Project="$(MSBuildExtensionsPath32)\Microsoft\VisualStudio\v$(VisualStudioVersion)\Python Tools\Microsoft.PythonTools.targets" />
   <!-- Uncomment the CoreCompile target to enable the Build command in

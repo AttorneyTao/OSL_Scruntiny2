@@ -56,11 +56,13 @@ def get_target_files():
 
 def simple_search(target_file_path,license_df):
     target_file=open(target_file_path)
-    lines=target_file.readlines()
+    try:
+        lines=target_file.readlines()
+    except:
+        print("{0} is not a source code file".format(target_file_path))
+        return [0]
     keys_list=license_df["key_word"]
-    res=[]
-    res_dict={}
-    res_dict_list=[]
+    res_list=[]
     for key in keys_list:
         pattern=re.compile(key)
         i=1
@@ -68,11 +70,11 @@ def simple_search(target_file_path,license_df):
             temp=pattern.findall(line)
             i+=1
             if len(temp)>0:
-                res_dict=[target_file_path.replace(r"target_files/",""),i,license_df[license_df['key_word']==key]['name'][0],license_df[license_df['key_word']==key]['category'][0]]
-                res_dict_list.append(res_dict)
+                res=[target_file_path.replace(r"target_files/",""),i,license_df[license_df['key_word']==key]['name'].iloc[0],license_df[license_df['key_word']==key]['category'].iloc[0]]
+                res_list.append(res)
 
     #print(res_dict_list)
-    return res_dict_list
+    return res_list
 
     
 if __name__=='__main__':
@@ -83,8 +85,11 @@ if __name__=='__main__':
     for target_file in file_list:
         target_file=target_file.replace("target_files\\","")
         res=simple_search(target_file_path+target_file,license_df)
-        print("检索 {0}后发现{1}处开源许可证特征点".format(target_file,len(res)))
-        res_list+=res
-        res=[]
+        if res==[0]:
+            continue
+        else:
+            print("检索 {0}后发现{1}处开源许可证特征点".format(target_file,len(res)))
+            res_list+=res
+            res=[]
     res_df=pd.DataFrame(res_list,columns=["file_name","line","license_name","catagory"])
     res_df.to_excel("Scrutiny_result.xlsx")
