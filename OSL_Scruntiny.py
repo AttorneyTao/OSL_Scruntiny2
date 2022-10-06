@@ -1,5 +1,5 @@
-
- # -*- coding: gbk -*-
+ï»¿
+ # -*- coding: utf-8-*-
 """Copyright <YEAR> <COPYRIGHT HOLDER>
 
 Permission is hereby granted, free of charge, 
@@ -24,26 +24,48 @@ from typing import KeysView
 import numpy as np
 import pandas as pd
 import re
+import chardet
+import time
+import timeout_decorator
+TIMEOUT=5
 
 def read_license_lib():
-    """»ñÈ¡license_lib.csvÎÄ¼şÖĞµÄ¿ªÔ´Ğ­ÒéÁĞ±í£¬·µ»ØÖµÎªdf,
-    df["name"]:Ğ­ÒéÃû
-    df["abbr"]:Ğ­Òé¼ò³Æ
-    df["key_word"]:ÓÃÓÚÊ¶±ğĞ­ÒéµÄ¹Ø¼ü×Ö
-    df["license_head"]:Ê¹ÓÃ¸ÃĞ­ÒéµÄÎÄ¼şÍ·
-    df["license_fulltext"]:Ğ­ÒéÈ«ÎÄ
-    df["category"]:Ğ­Òé·ÖÀà£¬·ÖÎªcopyleftºÍpermissiveÁ½Àà
+    """è·å–license_lib.csvæ–‡ä»¶ä¸­çš„å¼€æºåè®®åˆ—è¡¨ï¼Œè¿”å›å€¼ä¸ºdf,
+    df["name"]:åè®®å
+    df["abbr"]:åè®®ç®€ç§°
+    df["key_word"]:ç”¨äºè¯†åˆ«åè®®çš„å…³é”®å­—
+    df["license_head"]:ä½¿ç”¨è¯¥åè®®çš„æ–‡ä»¶å¤´
+    df["license_fulltext"]:åè®®å…¨æ–‡
+    df["category"]:åè®®åˆ†ç±»ï¼Œåˆ†ä¸ºcopyleftå’Œpermissiveä¸¤ç±»
       """
     df=pd.read_excel(r"license_lib.xlsx")
     #if __debug__:
        # print("fulltext:{full}\nkeyword:{key}".format(full=df["license_fulltext"],key=df["key_word"]))
     return df
+
+def encoding_det(target_file_path):
+    """
+    æ£€æµ‹æ–‡ä»¶ç¼–ç ç±»å‹
+    Parameters:
+    target_file_path:ç›®æ ‡æ–‡ä»¶è·¯å¾„
+    Return:
+    <string>
+    """
+    f=open(file=target_file_path,mode='rb')
+    data=f.read()
+    f.close()
+    print("detecting {0}".format(target_file_path))
+    res=chardet.detect(data)
+    print("{0} is encoded by {1}".format(target_file_path,res))
+    return(res['encoding'])
+
+
 def get_target_files():
-    """»ñÈ¡target_filesÎÄ¼ş¼ĞÏÂµÄËùÓĞÎÄ¼şÇåµ¥"""
+    """è·å–target_filesæ–‡ä»¶å¤¹ä¸‹çš„æ‰€æœ‰æ–‡ä»¶æ¸…å•"""
     file_list=[]
     i=0
     for root,dirs,files in os.walk(r"target_files"):
-        if i>=0:  #·Ï´úÂë£¬¼Ó×ÅÍæµÄ
+        if i>=0:  #åºŸä»£ç ï¼ŒåŠ ç€ç©çš„
             j=0
             for f in files:
                 f=root+"\\"+f
@@ -55,11 +77,19 @@ def get_target_files():
     return file_list
 
 def simple_search(target_file_path,license_df):
-    target_file=open(target_file_path)
+    """ä»¥æ­£åˆ™è¡¨è¾¾å¼æ–¹æ³•è¯†åˆ«å¼€æºè®¸å¯è¯æ–‡ä»¶
+    parameters:
+    target_file_path:ç›®æ ‡æ–‡ä»¶è·¯å¾„
+    license_df:è®¸å¯è¯åˆ—è¡¨
+      """
+    enc=encoding_det(target_file_path)
+
+    target_file=open(target_file_path,encoding=enc)
     try:
+        print("reading {0}".format(target_file_path))
         lines=target_file.readlines()
     except:
-        print("{0} is not a source code file".format(target_file_path))
+        print("{0} is not a readable file".format(target_file_path,enc))
         return [0]
     keys_list=license_df["key_word"]
     res_list=[]
@@ -74,12 +104,26 @@ def simple_search(target_file_path,license_df):
                 res_list.append(res)
 
     #print(res_dict_list)
+    target_file.close()
     return res_list
 
+def file_screen(file_list,stop_list=['.xlsx','.doc','.pptx','.ppt','.sln','.svg','.pdf','.docx','.jpg','.png']):
+    """
+    ç”¨äºç­›é€‰æ— éœ€å®¡æŸ¥çš„æ–‡ä»¶ï¼Œä¸»è¦æœ‰.xlsx,.docx,.pptx,.sln
+    å¯éšä½¿ç”¨æƒ…å†µæ·»åŠ 
+    """
+    res=file_list.copy()
+    print("deleting none source files")
+    for f in file_list:
+        if os.path.splitext(f)[-1] in stop_list:
+            print("{0} is removed".format(f))
+            res.remove(f)
+    return res
     
 if __name__=='__main__':
     license_df=read_license_lib()
     file_list=get_target_files()
+    file_list=file_screen(file_list)
     target_file_path=r"target_files/"
     res_list=[]
     for target_file in file_list:
@@ -88,7 +132,7 @@ if __name__=='__main__':
         if res==[0]:
             continue
         else:
-            print("¼ìË÷ {0}ºó·¢ÏÖ{1}´¦¿ªÔ´Ğí¿ÉÖ¤ÌØÕ÷µã".format(target_file,len(res)))
+            print("æ£€ç´¢ {0}åå‘ç°{1}å¤„å¼€æºè®¸å¯è¯ç‰¹å¾ç‚¹".format(target_file,len(res)))
             res_list+=res
             res=[]
     res_df=pd.DataFrame(res_list,columns=["file_name","line","license_name","catagory"])
