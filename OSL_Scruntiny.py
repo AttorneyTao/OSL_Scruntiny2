@@ -1,5 +1,6 @@
 ﻿
  # -*- coding: utf-8-*-
+ #待解决问题：
 """Copyright <YEAR> <COPYRIGHT HOLDER>
 
 Permission is hereby granted, free of charge, 
@@ -75,7 +76,38 @@ def get_target_files():
         i+=1
         
     return file_list
+def process_keys_list(keys_list):
+    """
+    对关键词进行预处理，插入\s代替原来的所有空格，防止出现多空格或特殊空格影响搜索
+    """
+    res=[]
+    for key in keys_list:
+        res.append(key.replace(' ',r'\s+'))
+    print(res)
+    return res
+def lines_combine(lines):
+    """
+    将多行的字符合并到一个字符中
+    """
+    res_str=""
+    for line in lines:
+        res_str+=line
+    #print(res_str)
+    return res_str
 
+def clear_comment_mark(code_text):
+    cmt_mk=[r'//',r"#",r'"""',r'',r"/*",r"*/",r"*"]
+    for mk in cmt_mk:
+        code_text=code_text.replace(mk,"")
+    print(code_text)
+    return code_text
+def count_lines(text,pos):
+    """数字符串中的索引对应的行数"""
+    i=0
+    for c in text[0:pos]:
+        if c=='\n':
+            i+=1;
+    return i
 def simple_search(target_file_path,license_df):
     """以正则表达式方法识别开源许可证文件
     parameters:
@@ -88,26 +120,32 @@ def simple_search(target_file_path,license_df):
     try:
         print("reading {0}".format(target_file_path))
         lines=target_file.readlines()
+        line=lines_combine(lines)
+        line=clear_comment_mark(line)
     except:
         print("{0} is not a readable file".format(target_file_path,enc))
         return [0]
+
     keys_list=license_df["key_word"]
+    keys_list=process_keys_list(keys_list)
     res_list=[]
     for key in keys_list:
-        pattern=re.compile(key)
+        pattern=re.compile(key,re.IGNORECASE)
         i=1
-        for line in lines:
-            temp=pattern.findall(line)
-            i+=1
-            if len(temp)>0:
-                res=[target_file_path.replace(r"target_files/",""),i,license_df[license_df['key_word']==key]['name'].iloc[0],license_df[license_df['key_word']==key]['category'].iloc[0]]
-                res_list.append(res)
+
+        temp=pattern.findall(line)
+        i+=1
+        if len(temp)>0:
+            pos=line.index(temp[0])
+            lc=count_lines(line,pos)
+            res=[target_file_path.replace(r"target_files/",""),lc,license_df[license_df['key_word']==key.replace(r'\s+',' ')]['name'].iloc[0],license_df[license_df['key_word']==key.replace(r'\s+',' ')]['category'].iloc[0]]
+            res_list.append(res)
 
     #print(res_dict_list)
     target_file.close()
     return res_list
 
-def file_screen(file_list,stop_list=['.xlsx','.doc','.pptx','.ppt','.sln','.svg','.pdf','.docx','.jpg','.png']):
+def file_screen(file_list,stop_list=['.xlsx','.doc','.pptx','.ppt','.sln','.svg','.pdf','.docx','.jpg','.png','.ipch']):
     """
     用于筛选无需审查的文件，主要有.xlsx,.docx,.pptx,.sln
     可随使用情况添加
